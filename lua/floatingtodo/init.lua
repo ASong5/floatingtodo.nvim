@@ -41,7 +41,7 @@ local function calculate_position(position)
 end
 
 local function win_config(opts)
-	local width = math.min(math.floor(vim.o.columns * opts.width), 64)
+	local width = math.floor(vim.o.columns * opts.width)
 	local height = math.floor(vim.o.lines * opts.height)
 
 	local posx, posy = calculate_position(opts.position)
@@ -82,23 +82,22 @@ local function open_floating_file(opts)
 	vim.bo[buf].swapfile = false
 
 	win = vim.api.nvim_open_win(buf, true, win_config(opts))
+end
 
-	vim.api.nvim_buf_set_keymap(buf, "n", "q", "", {
-		noremap = true,
-		silent = true,
-		callback = function()
-			if vim.api.nvim_get_option_value("modified", { buf = buf }) then
-				vim.notify("save your changes pls", vim.log.levels.WARN)
-			else
-				vim.api.nvim_win_close(0, true)
-				win = nil
-			end
-		end,
-	})
+local function resize_floating_window(opts)
+	if win ~= nil and vim.api.nvim_win_is_valid(win) then
+		vim.api.nvim_win_set_config(win, win_config(opts))
+	end
 end
 
 local function setup_user_commands(opts)
 	opts = vim.tbl_deep_extend("force", default_opts, opts)
+
+	vim.api.nvim_create_autocmd("VimResized", {
+		callback = function()
+			resize_floating_window(opts)
+		end,
+	})
 
 	vim.api.nvim_create_user_command("Td", function()
 		open_floating_file(opts)
@@ -110,3 +109,4 @@ M.setup = function(opts)
 end
 
 return M
+
